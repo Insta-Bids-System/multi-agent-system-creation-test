@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Validation Report",
+  "type": "object",
+  "required": [
+    "uid",
+    "validationTimestamp",
+    "overallScore",
+    "evaluationCriteria",
+    "recommendations"
+  ],
+  "properties": {
+    "uid": {
+      "type": "string",
+      "description": "Session UID being validated"
+    },
+    "validationTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of validation"
+    },
+    "overallScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Average score across all criteria"
+    },
+    "evaluationCriteria": {
+      "type": "object",
+      "required": [
+        "roleAdherence",
+        "frameworkAdherenceJTBD",
+        "frameworkAdherence5Whys",
+        "conversationRelevancy",
+        "outputSchemaCompliance",
+        "absenceOfHallucinations"
+      ],
+      "properties": {
+        "roleAdherence": {
+          "$ref": "#/definitions/evaluationResult"
+        },
+        "frameworkAdherenceJTBD": {
+          "$ref": "#/definitions/evaluationResult"
+        },
+        "frameworkAdherence5Whys": {
+          "$ref": "#/definitions/evaluationResult"
+        },
+        "conversationRelevancy": {
+          "$ref": "#/definitions/evaluationResult"
+        },
+        "outputSchemaCompliance": {
+          "$ref": "#/definitions/evaluationResult"
+        },
+        "absenceOfHallucinations": {
+          "$ref": "#/definitions/evaluationResult"
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Actionable recommendations for improvement"
+    }
+  },
+  "definitions": {
+    "evaluationResult": {
+      "type": "object",
+      "required": ["score", "reasoning"],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reasoning": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

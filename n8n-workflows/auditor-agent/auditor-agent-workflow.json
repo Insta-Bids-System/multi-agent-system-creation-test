@@ -1,0 +1,229 @@
+{
+  "name": "Pain Point Scoping - Auditor",
+  "nodes": [
+    {
+      "parameters": {
+        "channel": "scoping_complete"
+      },
+      "id": "mcp-trigger",
+      "name": "MCP Trigger - Scoping Complete",
+      "type": "n8n-nodes-base.mcpTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "queryString": "name contains '{{ $json.message.uid }}-PainPointScope'",
+        "returnAll": true,
+        "options": {
+          "fields": "files(id, name)"
+        }
+      },
+      "id": "search-session-file",
+      "name": "Search Session File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "download-file",
+      "name": "Download Session Data",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "mode": "jsonToBinary",
+        "convertAllData": false,
+        "sourceKey": "data",
+        "destinationKey": "sessionData"
+      },
+      "id": "extract-json",
+      "name": "Extract JSON Data",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "criteria",
+              "name": "evaluationCriteria",
+              "value": "={{ ['roleAdherence', 'frameworkAdherenceJTBD', 'frameworkAdherence5Whys', 'conversationRelevancy', 'outputSchemaCompliance', 'absenceOfHallucinations'] }}",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "id": "set-criteria",
+      "name": "Set Evaluation Criteria",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "claude-3-opus-20240229",
+        "prompt": {
+          "type": "define",
+          "text": "{{ $json.prompt }}"
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 1024
+        }
+      },
+      "id": "evaluate-criterion",
+      "name": "Claude - Evaluate Criterion",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "uid",
+              "field2": "uid"
+            }
+          ]
+        }
+      },
+      "id": "combine-results",
+      "name": "Combine Evaluation Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate evaluation results into final report\nconst evaluations = $input.all();\nconst uid = evaluations[0].json.uid;\nconst timestamp = new Date().toISOString();\n\nlet totalScore = 0;\nconst evaluationCriteria = {};\nconst recommendations = [];\n\nevaluations.forEach(eval => {\n  const criterion = eval.json.criterion;\n  const result = JSON.parse(eval.json.result);\n  \n  evaluationCriteria[criterion] = result;\n  totalScore += result.score;\n  \n  if (result.score < 0.8) {\n    recommendations.push(`Improve ${criterion}: ${result.reasoning}`);\n  }\n});\n\nconst overallScore = totalScore / evaluations.length;\n\nreturn {\n  uid: uid,\n  validationTimestamp: timestamp,\n  overallScore: overallScore,\n  evaluationCriteria: evaluationCriteria,\n  recommendations: recommendations\n};"
+      },
+      "id": "generate-report",
+      "name": "Generate Validation Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "fileContent": "={{ JSON.stringify($json, null, 2) }}",
+        "fileName": "={{ $json.uid }}-ValidationReport.json",
+        "folderId": "{{ $credentials.googleDrive.scopingSessionsFolderId }}"
+      },
+      "id": "save-report",
+      "name": "Save Validation Report",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1850, 300]
+    }
+  ],
+  "connections": {
+    "MCP Trigger - Scoping Complete": {
+      "main": [
+        [
+          {
+            "node": "Search Session File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Session File": {
+      "main": [
+        [
+          {
+            "node": "Download Session Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Session Data": {
+      "main": [
+        [
+          {
+            "node": "Extract JSON Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract JSON Data": {
+      "main": [
+        [
+          {
+            "node": "Set Evaluation Criteria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Evaluation Criteria": {
+      "main": [
+        [
+          {
+            "node": "Claude - Evaluate Criterion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude - Evaluate Criterion": {
+      "main": [
+        [
+          {
+            "node": "Combine Evaluation Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Evaluation Results": {
+      "main": [
+        [
+          {
+            "node": "Generate Validation Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Validation Report": {
+      "main": [
+        [
+          {
+            "node": "Save Validation Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "auditor-agent-workflow"
+}

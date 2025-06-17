@@ -1,0 +1,116 @@
+{
+  "name": "Pain Point Scoping - Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "start-scoping-session",
+        "options": {
+          "responseData": "firstEntryJson",
+          "responsePropertyName": "data"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Start Session",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate UUID v4 for session tracking\nfunction uuidv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst uid = uuidv4();\nconst initialContext = $input.first().json;\n\nreturn {\n  uid: uid,\n  initialContext: initialContext,\n  sessionStartTime: new Date().toISOString()\n};"
+      },
+      "id": "generate-uid",
+      "name": "Generate Session UID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "scoping-agent-workflow-id",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "execute-scoping",
+      "name": "Execute Scoping Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "channel": "scoping_complete",
+        "message": "={{ JSON.stringify({ uid: $json.uid, status: 'completed' }) }}"
+      },
+      "id": "mcp-publish",
+      "name": "Publish Completion Event",
+      "type": "n8n-nodes-base.mcpClient",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseData": "firstEntryJson",
+          "responsePropertyName": "data"
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Start Session": {
+      "main": [
+        [
+          {
+            "node": "Generate Session UID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Session UID": {
+      "main": [
+        [
+          {
+            "node": "Execute Scoping Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Scoping Agent": {
+      "main": [
+        [
+          {
+            "node": "Publish Completion Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Completion Event": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "orchestrator-workflow"
+}

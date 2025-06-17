@@ -1,0 +1,76 @@
+:root {
+  --bg-primary: #0a0e27;
+  --bg-secondary: #151a3a;
+  --text-primary: #ffffff;
+  --text-secondary: #a8b2d1;
+  --accent-primary: #64ffda;
+  --accent-secondary: #5a67d8;
+  --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --shadow-glow: 0 0 20px rgba(100, 255, 218, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+/* Override CopilotKit default styles for dark theme */
+.copilotKitSidebar {
+  background: var(--bg-secondary) !important;
+  border-left: 1px solid rgba(100, 255, 218, 0.2) !important;
+}
+
+.copilotKitMessages {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.copilotKitMessage {
+  color: var(--text-primary) !important;
+}
+
+.copilotKitUserMessage {
+  background: var(--gradient-1) !important;
+  color: white !important;
+}
+
+.copilotKitAssistantMessage {
+  background: rgba(100, 255, 218, 0.1) !important;
+  border: 1px solid rgba(100, 255, 218, 0.3) !important;
+}
+
+.copilotKitInput {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 2px solid rgba(100, 255, 218, 0.3) !important;
+  color: var(--text-primary) !important;
+}
+
+.copilotKitInput:focus {
+  border-color: var(--accent-primary) !important;
+  box-shadow: var(--shadow-glow) !important;
+}
+
+.copilotKitSendButton {
+  background: var(--gradient-1) !important;
+  color: white !important;
+}
+
+.copilotKitSendButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
