@@ -1,4 +1,9 @@
-import { CopilotRuntime, OpenAIAdapter } from "@copilotkit/runtime";
+import { 
+  CopilotRuntime, 
+  OpenAIAdapter,
+  copilotRuntimeNextJSAppRouterEndpoint 
+} from "@copilotkit/runtime";
+import OpenAI from "openai";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export default async function handler(
@@ -49,32 +54,66 @@ export default async function handler(
     console.log("Initializing CopilotKit runtime...");
     console.log("API Key present:", apiKey.substring(0, 7) + "...");
     
-    // Create the runtime
-    const runtime = new CopilotRuntime();
-    
-    // Create OpenAI adapter
-    const serviceAdapter = new OpenAIAdapter({ 
+    // Create OpenAI instance
+    const openai = new OpenAI({
       apiKey: apiKey,
-      model: "gpt-4o"
     });
 
-    // Stream the response
-    const { headers, body, status } = await runtime.response(req, serviceAdapter);
+    // Create the service adapter
+    const serviceAdapter = new OpenAIAdapter({ openai });
+
+    // Create the runtime
+    const runtime = new CopilotRuntime();
+
+    // Create the handler
+    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+      runtime,
+      serviceAdapter,
+      endpoint: "/api/copilotkit",
+    });
+
+    // Convert the request to NextRequest format
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const headers = new Headers();
     
-    // Set response headers
-    for (const [key, value] of Object.entries(headers)) {
+    // Copy headers
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === 'string') {
+        headers.set(key, value);
+      } else if (Array.isArray(value)) {
+        headers.set(key, value.join(','));
+      }
+    }
+
+    // Create NextRequest
+    const nextRequest = new Request(url, {
+      method: req.method,
+      headers: headers,
+      body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
+    });
+
+    // Handle the request
+    const response = await handleRequest(nextRequest as any);
+    
+    // Copy response headers
+    response.headers.forEach((value, key) => {
       res.setHeader(key, value);
+    });
+    
+    // Set status
+    res.status(response.status);
+    
+    // Send body
+    if (response.body) {
+      const reader = response.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
     }
     
-    // Set status and send body
-    res.status(status || 200);
-    
-    // If body is a readable stream, pipe it
-    if (body && typeof body.pipe === 'function') {
-      body.pipe(res);
-    } else {
-      res.send(body);
-    }
+    res.end();
     
   } catch (error) {
     console.error("CopilotKit API Error:", error);
