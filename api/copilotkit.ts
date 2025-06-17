@@ -52,7 +52,6 @@ export default async function handler(
 
     // Log for debugging
     console.log("Initializing CopilotKit runtime...");
-    console.log("API Key present:", apiKey.substring(0, 7) + "...");
     
     // Create OpenAI instance
     const openai = new OpenAI({
@@ -60,10 +59,15 @@ export default async function handler(
     });
 
     // Create the service adapter
-    const serviceAdapter = new OpenAIAdapter({ openai });
+    const serviceAdapter = new OpenAIAdapter({ 
+      openai,
+      model: "gpt-4-turbo-preview" // Specify the model explicitly
+    });
 
     // Create the runtime
-    const runtime = new CopilotRuntime();
+    const runtime = new CopilotRuntime({
+      debug: true // Enable debug mode for better error tracking
+    });
 
     // Create the handler
     const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
@@ -71,6 +75,28 @@ export default async function handler(
       serviceAdapter,
       endpoint: "/api/copilotkit",
     });
+
+    // Parse the request body
+    let body;
+    try {
+      body = await new Promise((resolve) => {
+        let data = '';
+        req.on('data', chunk => {
+          data += chunk;
+        });
+        req.on('end', () => {
+          resolve(data);
+        });
+      });
+    } catch (error) {
+      console.error("Error parsing request body:", error);
+      return res.status(400).json({ 
+        error: { 
+          code: "400", 
+          message: "Invalid request body" 
+        } 
+      });
+    }
 
     // Convert the request to NextRequest format
     const url = new URL(req.url || '', `http://${req.headers.host}`);
@@ -89,7 +115,7 @@ export default async function handler(
     const nextRequest = new Request(url, {
       method: req.method,
       headers: headers,
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
+      body: body
     });
 
     // Handle the request
