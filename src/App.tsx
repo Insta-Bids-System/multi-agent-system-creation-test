@@ -9,7 +9,6 @@ function App() {
   return (
     <CopilotKit 
       runtimeUrl="/api/copilotkit"
-      showDevConsole={false}
     >
       <div className="app-container">
         <CopilotSidebar
