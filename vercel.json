@@ -2,12 +2,18 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/copilotkit",
+      "destination": "/api/copilotkit"
     },
     {
       "source": "/(.*)",
-      "destination": "/"
+      "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/copilotkit.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 }

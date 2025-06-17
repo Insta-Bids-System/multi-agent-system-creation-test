@@ -1,6 +1,7 @@
 import { SessionContext, Message } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_N8N_WEBHOOK_URL || '';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api/copilotkit';
+const N8N_WEBHOOK_URL = process.env.REACT_APP_N8N_WEBHOOK_URL || '';
 const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '300000');
 
 export class ApiService {
@@ -30,7 +31,8 @@ export class ApiService {
 
   static async startSession(context: SessionContext): Promise<string> {
     try {
-      const response = await this.fetchWithTimeout(API_BASE_URL, {
+      // Use n8n webhook for session start
+      const response = await this.fetchWithTimeout(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,14 +57,18 @@ export class ApiService {
     message: string
   ): Promise<Message> {
     try {
-      const response = await this.fetchWithTimeout(`${API_BASE_URL}/message`, {
+      // Use CopilotKit API for chat
+      const response = await this.fetchWithTimeout(API_BASE_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionId,
-          message,
+          messages: [{
+            role: 'user',
+            content: message
+          }],
+          sessionId
         }),
       });
 
@@ -72,10 +78,10 @@ export class ApiService {
 
       const data = await response.json();
       return {
-        id: data.messageId,
-        text: data.response,
+        id: `msg-${Date.now()}`,
+        text: data.content,
         sender: 'ai',
-        timestamp: new Date(data.timestamp),
+        timestamp: new Date(),
       };
     } catch (error) {
       console.error('Error sending message:', error);
@@ -85,7 +91,8 @@ export class ApiService {
 
   static async endSession(sessionId: string): Promise<void> {
     try {
-      const response = await this.fetchWithTimeout(`${API_BASE_URL}/end`, {
+      // Use n8n webhook for session end
+      const response = await this.fetchWithTimeout(`${N8N_WEBHOOK_URL}/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
